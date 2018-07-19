@@ -1,7 +1,4 @@
 from multiprocessing import Manager, Process, Queue
-import numpy as np
-import plotly.graph_objs as go
-from sklearn.model_selection import GridSearchCV
 from tqdm import tqdm
 
 
@@ -32,37 +29,6 @@ class Theme():
             self.ORANGE
         ]
         return array[key % len(array)]
-
-
-def fit_one(args):
-    """fit a single model
-
-    Args:
-        Args: ((pos, neg), queue, clf, params, x_train, y_train)
-
-    Returns:
-        fitted GridSearchCV, pos, neg
-    """
-    labels, queue, clf, params, x_train, y_train = args
-    pos, neg = labels
-
-    # separate classes in the training set
-    pidx = np.where(y_train == pos)[0]
-    nidx = np.where(y_train == neg)[0]
-    idx  = np.concatenate((pidx, nidx))
-
-    # set positive and negative class labels
-    yt = y_train**0*-1
-    yt[pidx] = 1
-
-    # make the separation
-    xt = x_train[idx, :]
-    yt = yt[idx]
-
-    # fit, report, return
-    gs = GridSearchCV(clf, params).fit(xt, yt)
-    qu.put(1)
-    return gs, pos, neg
 
 
 def progress_bar(total, desc=''):
@@ -160,78 +126,3 @@ def prod_con_map(func, vals, n_cons):
     del consumers
 
     return results
-
-
-def evaluation(df, exclusions=None):
-    """display unique values and bincounts
-
-    Args:
-        dataframe: (DataFrame) Pandas DataFrame to process
-        exclusions: [(str)] optional list of columns to exclude
-    """
-    cols = list(set(df.columns) - set(exclusions)) if exclusions is not None else df
-    row_sep = '-'.join(["-" for i in range(15)])
-    for col in cols:
-        print(col)
-        print(row_sep)
-        print(f'{df[col].value_counts(dropna=False)}\n')
-
-    print("excluded NaN counts")
-    print(row_sep)
-    for col in exclusions:
-        print(f'{col} - {len(df[df[col].isnull()])}')
-
-
-def plot_confusion_matrix(cm, classes):
-    """plot a confusion matrix
-
-    Args:
-        cm: (sklearn.metrics.confusion_matrix
-        classes: [(str)] list of class labels
-
-    Returns:
-        plotly.graph_objects.Figure
-    """
-    # generate the heatmap, inver both the cm and y axis
-    hm = go.Heatmap(
-        z=cm[::-1],
-        x=classes,
-        y=classes[::-1],
-        colorscale=[[0, Theme().TAN], [1, Theme().LIGHT_BLUE]],
-        showscale=False,
-        hoverinfo='none',
-        xgap=1,
-        ygap=1
-    )
-
-    # add the counts
-    annotations = []
-    for i, c1 in enumerate(classes):
-        for j, c2 in enumerate(classes):
-            a = go.Scatter(
-                x=[c1],
-                y=[c2],
-                mode='text',
-                text=cm[j, i],
-                hoverinfo='none'
-            )
-            annotations.append(a)
-
-    # create the layout
-    layout = go.Layout(
-        title='Confusion matrix',
-        xaxis=dict(
-            title='Predicted label',
-            autorange=True
-        ),
-        yaxis=dict(
-            title='True label',
-            autorange=True
-        ),
-        height=600,
-        width=600,
-        showlegend=False
-    )
-
-    fig = go.Figure(data=[hm ] +annotations, layout=layout)
-    return fig
