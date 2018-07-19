@@ -1,3 +1,13 @@
+from multiprocessing import Manager, Process, Queue
+import numpy as np
+import plotly.graph_objs as go
+from sklearn.model_selection import GridSearchCV
+from tqdm import tqdm
+
+
+proc_manager = Manager()
+qu = proc_manager.Queue()
+
 
 class Theme():
     """simple theme to treat as an enum
@@ -21,19 +31,19 @@ class Theme():
             self.GREY,
             self.ORANGE
         ]
-        return array[ke y %len(array)]
+        return array[key % len(array)]
 
 
 def fit_one(args):
     """fit a single model
 
     Args:
-        Args: ((pos, neg), queue, clf, params)
+        Args: ((pos, neg), queue, clf, params, x_train, y_train)
 
     Returns:
         fitted GridSearchCV, pos, neg
     """
-    labels, queue, clf, params = args
+    labels, queue, clf, params, x_train, y_train = args
     pos, neg = labels
 
     # separate classes in the training set
@@ -42,7 +52,7 @@ def fit_one(args):
     idx  = np.concatenate((pidx, nidx))
 
     # set positive and negative class labels
-    yt = y_trai n* * 0 *-1
+    yt = y_train**0*-1
     yt[pidx] = 1
 
     # make the separation
@@ -109,7 +119,6 @@ def prod_con_map(func, vals, n_cons):
             r_qu.put(rv)
 
         r_qu.put('END')
-
 
     # create queues to pass tasks and results
     consumption_queue = Queue()
